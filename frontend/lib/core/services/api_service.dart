@@ -3,38 +3,81 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // Bilgisayarınız aynı Wi-Fi'ye bağlıysa backend çalışan bilgisayarın yerel IP'sini yazmalısın.
-  // Emülatör için varsayılan localhost IP'si: "10.0.0.2" veya gerçek telefon için bilgisayarının IP'si (örn: "192.168.1.35")
+  // ✅ DÜZELTME: Emülatör için 10.0.2.2, gerçek telefon için bilgisayarının yerel IP'si
+  // Gerçek telefon testi için: "http://192.168.X.X:8000" şeklinde değiştir
   static const String baseUrl = "http://10.0.2.2:8000";
 
-  /// Çekilen fotoğrafı yüz tanıma için backend sunucusuna gönderir
-  Future<bool> verifyAttendance({required String imagePath, required String studentId}) async {
+  /// Çekilen fotoğrafı ve RSSI değerini backend'e göndererek yoklama doğrular.
+  Future<Map<String, dynamic>> verifyAttendance({
+    required String imagePath,
+    required String studentId,
+    required int rssi, // ✅ DÜZELTME: RSSI artık parametre olarak alınıyor
+  }) async {
     try {
-      var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/attendance/verify'));
+      // ✅ DÜZELTME: Endpoint ve alan adları backend ile eşleştirildi
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/yoklama-kontrol/'),
+      );
 
-      // Form verilerini ekliyoruz (Arkadaşının backend modeline göre gerekirse güncellenebilir)
+      // Backend'in beklediği form alanları
       request.fields['student_id'] = studentId;
+      request.fields['mobil_olculen_rssi'] = rssi.toString();
 
-      // Fotoğraf dosyasını ekliyoruz
+      // Fotoğraf dosyası — backend "file" adıyla bekliyor
       var file = await http.MultipartFile.fromPath('file', imagePath);
       request.files.add(file);
 
-      print("🚀 Sunucuya istek gönderiliyor... URL: $baseUrl/attendance/verify");
-      var streamedResponse = await request.send();
+      print("🚀 Yoklama isteği gönderiliyor... Öğrenci: $studentId, RSSI: $rssi");
+
+      var streamedResponse = await request.send().timeout(
+        const Duration(seconds: 30),
+      );
       var response = await http.Response.fromStream(streamedResponse);
 
       print("📥 Sunucu Cevap Kodu: ${response.statusCode}");
       print("📥 Sunucu Gövdesi: ${response.body}");
 
+      final Map<String, dynamic> data = json.decode(response.body);
+
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        // Arkadaşın geriye muhtemelen "success: true" veya benzeri bir eşleşme sonucu dönüyordur
-        return data['success'] ?? false;
+        return {"success": true, "mesaj": data['mesaj'] ?? "Yoklama başarılı!"};
+      } else {
+        return {"success": false, "mesaj": data['mesaj'] ?? "Yoklama başarısız."};
       }
-      return false;
+    } on SocketException {
+      print("❌ Bağlantı Hatası: Sunucuya ulaşılamıyor.");
+      return {"success": false, "mesaj": "Sunucuya bağlanılamadı. IP adresini ve sunucunun çalıştığını kontrol edin."};
     } catch (e) {
       print("❌ API Hatası: $e");
-      return false;
+      return {"success": false, "mesaj": "Beklenmeyen bir hata oluştu: $e"};
+    }
+  }
+
+  /// Öğrencinin referans fotoğrafını sisteme kaydeder.
+  Future<Map<String, dynamic>> registerStudent({
+    required String studentId,
+    required String imagePath,
+  }) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/ogrenci-kaydet/'),
+      );
+      request.fields['ogrenci_id'] = studentId;
+      var file = await http.MultipartFile.fromPath('foto', imagePath);
+      request.files.add(file);
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+      final data = json.decode(response.body);
+
+      return {
+        "success": response.statusCode == 200,
+        "mesaj": data['mesaj'] ?? "İşlem tamamlandı."
+      };
+    } catch (e) {
+      return {"success": false, "mesaj": "Kayıt hatası: $e"};
     }
   }
 }

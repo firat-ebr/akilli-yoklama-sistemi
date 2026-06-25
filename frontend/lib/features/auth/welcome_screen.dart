@@ -13,11 +13,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   final _studentFormKey = GlobalKey<FormState>();
   final _teacherFormKey = GlobalKey<FormState>();
 
-  // Öğrenci Giriş Kontrolcüleri
   final _studentTcController = TextEditingController();
   final _studentNoController = TextEditingController();
-
-  // Eğitmen Giriş Kontrolcüleri
   final _teacherTcController = TextEditingController();
   final _teacherPasswordController = TextEditingController();
 
@@ -30,7 +27,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     super.dispose();
   }
 
-  // Giriş Alanları İçin Ortak Tasarım Şablonu
   InputDecoration _buildInputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
@@ -57,89 +53,99 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     );
   }
 
-  // Öğrenci Giriş Formu (BottomSheet / Açılır Pencere)
-  // ÖĞRENCİ GİRİŞ FORMU (Güncellenmiş - Taşma Engellenmiş Versiyon)
   void _showStudentLoginSheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF121218),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (context) => SafeArea( // Cihazın alt bar/çentik alanını korur
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) => SafeArea(
         child: Padding(
-          // Üstten 24, yanlardan 24 ve alttan tam klavye yüksekliği kadar + 24 piksel boşluk bırakır
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom + 24,
             left: 24,
             right: 24,
             top: 24,
           ),
-          child: SingleChildScrollView( // Klavye açıldığında içeriğin kaydırılabilmesini sağlar
+          child: SingleChildScrollView(
             child: Form(
               key: _studentFormKey,
               child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-              // Küçük bir tutamaç çizgisi (Tasarım için)
-                    // Küçük bir tutamaç çizgisi (Tasarım için)
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 20), // Doğru kullanım budur dostum
-                        decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
-                      ),
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                          color: Colors.white24, borderRadius: BorderRadius.circular(2)),
                     ),
-          const Text("Öğrenci Girişi", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 20),
-          TextFormField(
-            controller: _studentTcController,
-            keyboardType: TextInputType.number,
-            maxLength: 11,
-            style: const TextStyle(color: Colors.white),
-            decoration: _buildInputDecoration("T.C. Kimlik No", Icons.badge_rounded),
-            validator: (val) => (val == null || val.length != 11) ? "Geçerli bir T.C. giriniz" : null,
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _studentNoController,
-            keyboardType: TextInputType.number,
-            style: const TextStyle(color: Colors.white),
-            decoration: _buildInputDecoration("Öğrenci Numarası", Icons.pin_rounded),
-            validator: (val) => (val == null || val.isEmpty) ? "Öğrenci numarası boş bırakılamaz" : null,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () {
-              if (_studentFormKey.currentState!.validate()) {
-                Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const StudentDashboard()));
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blueAccent,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  const Text("Öğrenci Girişi",
+                      style: TextStyle(
+                          color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: _studentTcController,
+                    keyboardType: TextInputType.number,
+                    maxLength: 11,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _buildInputDecoration("T.C. Kimlik No", Icons.badge_rounded),
+                    validator: (val) =>
+                        (val == null || val.length != 11) ? "Geçerli bir T.C. giriniz" : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _studentNoController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _buildInputDecoration("Öğrenci Numarası", Icons.pin_rounded),
+                    validator: (val) =>
+                        (val == null || val.isEmpty) ? "Öğrenci numarası boş bırakılamaz" : null,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      if (_studentFormKey.currentState!.validate()) {
+                        Navigator.pop(context);
+                        // ✅ DÜZELTME: Öğrenci numarası parametre olarak geçiliyor
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => StudentDashboard(
+                              studentId: _studentNoController.text.trim(),
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text("Giriş Yap",
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
             ),
-            child: const Text("Giriş Yap", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
-          ],
         ),
       ),
-    ),
-    ),
-    ),
     );
   }
 
-  // EĞİTMEN GİRİŞ FORMU (Güncellenmiş - Taşma Engellenmiş Versiyon)
   void _showTeacherLoginSheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF121218),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) => SafeArea(
         child: Padding(
           padding: EdgeInsets.only(
@@ -160,10 +166,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       width: 40,
                       height: 4,
                       margin: const EdgeInsets.only(bottom: 20),
-                      decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                      decoration: BoxDecoration(
+                          color: Colors.white24, borderRadius: BorderRadius.circular(2)),
                     ),
                   ),
-                  const Text("Eğitmen Girişi", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                  const Text("Eğitmen Girişi",
+                      style: TextStyle(
+                          color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 20),
                   TextFormField(
                     controller: _teacherTcController,
@@ -171,7 +180,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     maxLength: 11,
                     style: const TextStyle(color: Colors.white),
                     decoration: _buildInputDecoration("T.C. Kimlik No", Icons.badge_rounded),
-                    validator: (val) => (val == null || val.length != 11) ? "Geçerli bir T.C. giriniz" : null,
+                    validator: (val) =>
+                        (val == null || val.length != 11) ? "Geçerli bir T.C. giriniz" : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -179,14 +189,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     obscureText: true,
                     style: const TextStyle(color: Colors.white),
                     decoration: _buildInputDecoration("Şifre", Icons.lock_rounded),
-                    validator: (val) => (val == null || val.length < 4) ? "Şifre en az 4 karakter olmalıdır" : null,
+                    validator: (val) => (val == null || val.length < 4)
+                        ? "Şifre en az 4 karakter olmalıdır"
+                        : null,
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () {
                       if (_teacherFormKey.currentState!.validate()) {
                         Navigator.pop(context);
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => const TeacherDashboard()));
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const TeacherDashboard()),
+                        );
                       }
                     },
                     style: ElevatedButton.styleFrom(
@@ -194,7 +209,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text("Giriş Yap", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    child: const Text("Giriş Yap",
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
@@ -218,15 +234,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             children: [
               const Icon(Icons.fingerprint_rounded, size: 80, color: Colors.blueAccent),
               const SizedBox(height: 16),
-              const Text("Akıllı Yoklama", textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+              const Text(
+                "Akıllı Yoklama",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 48),
-
-              // Öğrenci Kartı
-              _buildRoleButton("Öğrenci Girişi", Icons.school_rounded, Colors.blueAccent, _showStudentLoginSheet),
+              _buildRoleButton(
+                  "Öğrenci Girişi", Icons.school_rounded, Colors.blueAccent, _showStudentLoginSheet),
               const SizedBox(height: 16),
-
-              // Eğitmen Kartı
-              _buildRoleButton("Eğitmen Girişi", Icons.supervisor_account_rounded, Colors.teal, _showTeacherLoginSheet),
+              _buildRoleButton(
+                  "Eğitmen Girişi", Icons.supervisor_account_rounded, Colors.teal, _showTeacherLoginSheet),
             ],
           ),
         ),
@@ -249,7 +267,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           children: [
             Icon(icon, color: color, size: 32),
             const SizedBox(width: 16),
-            Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(title,
+                style: const TextStyle(
+                    color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
             const Spacer(),
             Icon(Icons.arrow_forward_ios_rounded, color: color, size: 18),
           ],

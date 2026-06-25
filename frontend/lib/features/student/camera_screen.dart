@@ -3,7 +3,15 @@ import 'package:camera/camera.dart';
 import 'package:akilli_yoklama/core/services/api_service.dart';
 
 class CameraScreen extends StatefulWidget {
-  const CameraScreen({super.key});
+  // ✅ DÜZELTME: RSSI değeri artık parametre olarak geçiliyor
+  final int rssiValue;
+  final String studentId;
+
+  const CameraScreen({
+    super.key,
+    required this.rssiValue,
+    required this.studentId,
+  });
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -23,13 +31,10 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _initializeCamera() async {
-    // Cihazdaki kullanılabilir kameraları alıyoruz
     _cameras = await availableCameras();
-
     if (_cameras != null && _cameras!.isNotEmpty) {
-      // Yüz tanıma olacağı için ön kamerayı (front) seçiyoruz
       CameraDescription frontCamera = _cameras!.firstWhere(
-            (camera) => camera.lensDirection == CameraLensDirection.front,
+        (camera) => camera.lensDirection == CameraLensDirection.front,
         orElse: () => _cameras!.first,
       );
 
@@ -60,24 +65,26 @@ class _CameraScreenState extends State<CameraScreen> {
     });
 
     try {
-      // 1. Fotoğrafı çek
       final XFile image = await _controller!.takePicture();
       print("📸 Fotoğraf çekildi: ${image.path}");
 
-      // 2. Sunucuya gönder (Örnek olarak student_id: "12345" yolluyoruz)
-      bool isMatched = await _apiService.verifyAttendance(
+      // ✅ DÜZELTME: RSSI ve studentId artık doğru şekilde gönderiliyor
+      final result = await _apiService.verifyAttendance(
         imagePath: image.path,
-        studentId: "12345",
+        studentId: widget.studentId,
+        rssi: widget.rssiValue,
       );
 
       if (mounted) {
-        _showResultDialog(isMatched);
+        _showResultDialog(result['success'] as bool, result['mesaj'] as String);
       }
     } catch (e) {
       print("❌ Fotoğraf işleme hatası: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fotoğraf çekilirken bir hata oluştu.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Fotoğraf çekilirken bir hata oluştu.')),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -87,7 +94,7 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  void _showResultDialog(bool isSuccess) {
+  void _showResultDialog(bool isSuccess, String message) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -95,24 +102,23 @@ class _CameraScreenState extends State<CameraScreen> {
         backgroundColor: const Color(0xFF1E1E2E),
         title: Text(
           isSuccess ? "✅ Yoklama Başarılı" : "❌ Eşleşme Başarısız",
-          style: TextStyle(color: isSuccess ? Colors.greenAccent : Colors.redAccent, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: isSuccess ? Colors.greenAccent : Colors.redAccent,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        content: Text(
-          isSuccess
-              ? "Yüzünüz başarıyla tanındı ve derse katılımınız sisteme işlendi."
-              : "Yüzünüz sistemdeki referans fotoğrafla eşleşmedi. Lütfen tekrar deneyin.",
-          style: const TextStyle(color: Colors.white70),
-        ),
+        content: Text(message, style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context); // Dialog'u kapat
+              Navigator.pop(context);
               if (isSuccess) {
                 Navigator.pop(context); // Kamera ekranını kapat
                 Navigator.pop(context); // Dashboard'a dön
               }
             },
-            child: const Text("Tamam", style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
+            child: const Text("Tamam",
+                style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
           )
         ],
       ),
@@ -137,46 +143,69 @@ class _CameraScreenState extends State<CameraScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF121218),
       appBar: AppBar(
-        title: const Text("Yüz Tanıma Bölümü", style: TextStyle(color: Colors.white)),
+        title: const Text("Yüz Tanıma", style: TextStyle(color: Colors.white)),
         backgroundColor: const Color(0xFF1E1E2E),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Stack(
         children: [
-          // Kamera Önizlemesi
           Positioned.fill(
-            child: AspectRatio(
-              aspectRatio: _controller!.value.aspectRatio,
-              child: CameraPreview(_controller!),
-            ),
+            child: CameraPreview(_controller!),
           ),
-
-          // Yüz hizalama halkası maskesi (Tasarım şıklığı için)
-          Align(
-            alignment: Alignment.center,
-            child: Container(
-              width: 280,
-              height: 280,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.blueAccent.withOpacity(0.8), width: 4),
+          // RSSI bilgisi üstte gösteriliyor
+          Positioned(
+            top: 16,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  "📶 RSSI: ${widget.rssiValue} dBm",
+                  style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ),
-
-          // Alt kısımdaki Fotoğraf Çekme Butonu
+          // Yüz hizalama halkası
+          Align(
+            alignment: Alignment.center,
+            child: Container(
+              width: 260,
+              height: 260,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.blueAccent.withOpacity(0.8), width: 3),
+              ),
+            ),
+          ),
+          // Fotoğraf çekme butonu
           Positioned(
             bottom: 40,
             left: 0,
             right: 0,
             child: Center(
               child: _isProcessing
-                  ? const CircularProgressIndicator(color: Colors.blueAccent)
-                  : FloatingActionButton(
-                onPressed: _takePictureAndVerify,
-                backgroundColor: Colors.blueAccent,
-                child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 28),
-              ),
+                  ? const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: Colors.blueAccent),
+                        SizedBox(height: 12),
+                        Text("Yüz analiz ediliyor...",
+                            style: TextStyle(color: Colors.white70)),
+                      ],
+                    )
+                  : FloatingActionButton.extended(
+                      onPressed: _takePictureAndVerify,
+                      backgroundColor: Colors.blueAccent,
+                      icon: const Icon(Icons.camera_alt_rounded, color: Colors.white),
+                      label: const Text("Yoklama Ver",
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
             ),
           ),
         ],
